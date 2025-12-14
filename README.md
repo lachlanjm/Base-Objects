@@ -1,0 +1,1 @@
+This is a simple collection of standardised and reusable code blocks found to b useful for mysel across multiple projects in C and Python.
