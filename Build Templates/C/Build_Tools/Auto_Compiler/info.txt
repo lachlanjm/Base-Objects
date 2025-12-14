@@ -1,0 +1,5 @@
+make[1]: Entering directory 'C:/Users/lachl/Desktop/Personal/Code/Industry DIR/Industry'
+gcc -std=c23 -Wall -g -DGLEW_STATIC -D_WIN64
+.\build\Objects
+.\build\make_build.log
+make[1]: Leaving directory 'C:/Users/lachl/Desktop/Personal/Code/Industry DIR/Industry'
