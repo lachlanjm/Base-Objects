@@ -10,6 +10,8 @@
 #include "../Vectors/matrix_4x4.h"
 #include "../Strings/String.h"
 
+#include <stdlib.h>
+
 enum dyn_array_type {
 	DYN_ARRAY_NO_TYPE,
 	DYN_ARRAY_INT_TYPE,
@@ -23,8 +25,14 @@ enum dyn_array_type {
 	DYN_ARRAY_STRING_TYPE
 };
 
+enum dyn_array_expansion_type {
+	DYN_ARRAY_EXPANSION_DOUBLE,
+	DYN_ARRAY_EXPANSION_FIXED
+};
+
 typedef struct dyn_array {
 	enum dyn_array_type type;
+	enum dyn_array_expansion_type expansion_type;
 	unsigned int current_size;
 	unsigned int max_size;
 	unsigned int item_size; // bytes
@@ -54,9 +62,11 @@ typedef struct dyn_array {
 #define dyn_get_last_4x4(DYN_ARRAY_STRUCT_PTR) dyn_get_4x4((DYN_ARRAY_STRUCT_PTR)->data, (DYN_ARRAY_STRUCT_PTR)->current_size - 1)
 #define dyn_get_last_string(DYN_ARRAY_STRUCT_PTR) dyn_get_string((DYN_ARRAY_STRUCT_PTR)->data, (DYN_ARRAY_STRUCT_PTR)->current_size - 1)
 
-static inline void set_dyn_array(dyn_array* const dyn_struct, const enum dyn_array_type type)
+
+static inline void set_dyn_array(dyn_array* const dyn_struct, const enum dyn_array_type type, const enum dyn_array_expansion_type expansion_type)
 {
 	dyn_struct->type = type;
+	dyn_struct->expansion_type = expansion_type;
 	dyn_struct->current_size = 0;
 	dyn_struct->max_size = 0;
 	dyn_struct->data = NULL;
@@ -94,6 +104,13 @@ static inline void set_dyn_array(dyn_array* const dyn_struct, const enum dyn_arr
 			dyn_struct->item_size = 1;
 			break;
 	}
+}
+
+static inline struct dyn_array* new_dyn_array(const enum dyn_array_type type, const enum dyn_array_expansion_type expansion_type)
+{
+	dyn_array* const dyn_struct = (dyn_array*)calloc(1, sizeof(dyn_array));
+	set_dyn_array(dyn_struct, type, expansion_type);
+	return dyn_struct;
 }
 
 /*
@@ -168,17 +185,74 @@ static inline void* add_slot_dyn_array(dyn_array* const dyn_struct)
 {
 	if (dyn_struct->current_size == dyn_struct->max_size)
 	{
-		dyn_struct->max_size = 2 * dyn_struct->max_size + 1;		
-		dyn_struct->data = realloc(dyn_struct->data, dyn_struct->max_size * dyn_struct->item_size);
+		switch (dyn_struct->expansion_type)
+		{
+			case DYN_ARRAY_EXPANSION_FIXED:
+				dyn_struct->max_size = dyn_struct->max_size + 1;		
+				dyn_struct->data = realloc(dyn_struct->data, dyn_struct->max_size * dyn_struct->item_size);
+				break;
+			case DYN_ARRAY_EXPANSION_DOUBLE:
+			default:
+				dyn_struct->max_size = 2 * dyn_struct->max_size + 1;		
+				dyn_struct->data = realloc(dyn_struct->data, dyn_struct->max_size * dyn_struct->item_size);
+				break;
+		}
 	}
 
 	dyn_struct->current_size++;
 	return get_last_dyn_array(dyn_struct);
 }
 
+static inline void* pop_slot_dyn_array(dyn_array* const dyn_struct, const unsigned int index)
+{
+	if (dyn_struct->current_size == 0) return NULL;
+	if (index >= dyn_struct->current_size) return NULL;
+
+	void* const item_ptr = get_dyn_array(dyn_struct, index);
+	void* const last_item_ptr = get_last_dyn_array(dyn_struct);
+
+	for (int i = index; i < dyn_struct->current_size - 1; i++)
+	{
+		void* const i_ptr = get_dyn_array(dyn_struct, i);
+		void* const next_i_ptr = get_dyn_array(dyn_struct, i+1);
+		for (int j = 0; j < dyn_struct->item_size; j++)
+		{
+			*((char*)i_ptr + j) = *((char*)next_i_ptr + j);
+		}
+	}
+
+	dyn_struct->current_size--;
+	return last_item_ptr;
+}
+
+static inline void append_item_dyn_array(dyn_array* const dyn_array, const void* const item)
+{
+	void* const slot = add_slot_dyn_array(dyn_array);
+	for (int i = 0; i < dyn_array->item_size; i++)
+	{
+		*((char*)slot + i) = *((char*)item + i);
+	}
+}
+
+static inline int strip_dyn_array(dyn_array* const dyn_struct)
+{
+	if (dyn_struct->current_size == 0) return -1;
+
+	if (dyn_struct->current_size < dyn_struct->max_size)
+	{
+		dyn_struct->max_size = dyn_struct->current_size;
+		dyn_struct->data = realloc(dyn_struct->data, dyn_struct->max_size * dyn_struct->item_size);
+	}
+
+	return dyn_struct->max_size;
+}
+
 static inline void clean_dyn_array(dyn_array* const dyn_struct)
 {
 	if (dyn_struct->data != NULL) free(dyn_struct->data);
+	dyn_struct->data = NULL;
+	dyn_struct->current_size = 0;
+	dyn_struct->max_size = 0;
 }
 
 #endif
