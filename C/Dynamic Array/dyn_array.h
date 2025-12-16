@@ -11,11 +11,14 @@
 #include "../Strings/String.h"
 
 #include <stdlib.h>
+#include <stdint.h>
 
 enum dyn_array_type {
 	DYN_ARRAY_NO_TYPE,
+	DYN_ARRAY_CHAR_TYPE,
 	DYN_ARRAY_INT_TYPE,
 	DYN_ARRAY_UINT_TYPE,
+	DYN_ARRAY_UINT_64T_TYPE,
 	DYN_ARRAY_VECTOR_2_TYPE,
 	DYN_ARRAY_VECTOR_3_TYPE,
 	DYN_ARRAY_VECTOR_4_TYPE,
@@ -42,8 +45,10 @@ typedef struct dyn_array {
 #define dyn_get_void_ptr(DYN_ARRAY_STRUCT_PTR, INDEX) ((DYN_ARRAY_STRUCT_PTR)->data + (INDEX)*((DYN_ARRAY_STRUCT_PTR)->item_size))
 #define dyn_get_last_void_ptr(DYN_ARRAY_STRUCT_PTR) dyn_get_void_ptr((DYN_ARRAY_STRUCT_PTR), (DYN_ARRAY_STRUCT_PTR)->current_size - 1)
 
+#define dyn_get_char(DYN_ARRAY_DATA, INDEX) ((char*)DYN_ARRAY_DATA)[INDEX]
 #define dyn_get_int(DYN_ARRAY_DATA, INDEX) ((int*)DYN_ARRAY_DATA)[INDEX]
 #define dyn_get_uint(DYN_ARRAY_DATA, INDEX) ((unsigned int*)DYN_ARRAY_DATA)[INDEX]
+#define dyn_get_uint_64t(DYN_ARRAY_DATA, INDEX) ((uint64_t*)DYN_ARRAY_DATA)[INDEX]
 #define dyn_get_vec2(DYN_ARRAY_DATA, INDEX) ((vector2*)DYN_ARRAY_DATA)[INDEX]
 #define dyn_get_vec3(DYN_ARRAY_DATA, INDEX) ((vector3*)DYN_ARRAY_DATA)[INDEX]
 #define dyn_get_vec4(DYN_ARRAY_DATA, INDEX) ((vector4*)DYN_ARRAY_DATA)[INDEX]
@@ -52,8 +57,10 @@ typedef struct dyn_array {
 #define dyn_get_4x4(DYN_ARRAY_DATA, INDEX) ((matrix_4x4*)DYN_ARRAY_DATA)[INDEX]
 #define dyn_get_string(DYN_ARRAY_DATA, INDEX) ((String*)DYN_ARRAY_DATA)[INDEX]
 
+#define dyn_get_last_char(DYN_ARRAY_STRUCT_PTR) dyn_get_char((DYN_ARRAY_STRUCT_PTR)->data, (DYN_ARRAY_STRUCT_PTR)->current_size - 1)
 #define dyn_get_last_int(DYN_ARRAY_STRUCT_PTR) dyn_get_int((DYN_ARRAY_STRUCT_PTR)->data, (DYN_ARRAY_STRUCT_PTR)->current_size - 1)
 #define dyn_get_last_uint(DYN_ARRAY_STRUCT_PTR) dyn_get_uint((DYN_ARRAY_STRUCT_PTR)->data, (DYN_ARRAY_STRUCT_PTR)->current_size - 1)
+#define dyn_get_last_uint_64t(DYN_ARRAY_STRUCT_PTR) dyn_get_uint_64t((DYN_ARRAY_STRUCT_PTR)->data, (DYN_ARRAY_STRUCT_PTR)->current_size - 1)
 #define dyn_get_last_vec2(DYN_ARRAY_STRUCT_PTR) dyn_get_vec2((DYN_ARRAY_STRUCT_PTR)->data, (DYN_ARRAY_STRUCT_PTR)->current_size - 1)
 #define dyn_get_last_vec3(DYN_ARRAY_STRUCT_PTR) dyn_get_vec3((DYN_ARRAY_STRUCT_PTR)->data, (DYN_ARRAY_STRUCT_PTR)->current_size - 1)
 #define dyn_get_last_vec4(DYN_ARRAY_STRUCT_PTR) dyn_get_vec4((DYN_ARRAY_STRUCT_PTR)->data, (DYN_ARRAY_STRUCT_PTR)->current_size - 1)
@@ -73,11 +80,17 @@ static inline void set_dyn_array(dyn_array* const dyn_struct, const enum dyn_arr
 
 	switch (dyn_struct->type)
 	{
+		case DYN_ARRAY_CHAR_TYPE:
+			dyn_struct->item_size = sizeof(char);
+			break;
 		case DYN_ARRAY_INT_TYPE:
 			dyn_struct->item_size = sizeof(int);
 			break;
 		case DYN_ARRAY_UINT_TYPE:
 			dyn_struct->item_size = sizeof(unsigned int);
+			break;
+		case DYN_ARRAY_UINT_64T_TYPE:
+			dyn_struct->item_size = sizeof(uint64_t);
 			break;
 		case DYN_ARRAY_VECTOR_2_TYPE:
 			dyn_struct->item_size = sizeof(vector2);
@@ -128,10 +141,14 @@ static inline void* get_dyn_array(const dyn_array* const dyn_struct, const unsig
 
 	switch (dyn_struct->type)
 	{
+		case DYN_ARRAY_CHAR_TYPE:
+			return &dyn_get_char(dyn_struct->data, index);
 		case DYN_ARRAY_INT_TYPE:
 			return &dyn_get_int(dyn_struct->data, index);
 		case DYN_ARRAY_UINT_TYPE:
 			return &dyn_get_uint(dyn_struct->data, index);
+		case DYN_ARRAY_UINT_64T_TYPE:
+			return &dyn_get_uint_64t(dyn_struct->data, index);
 		case DYN_ARRAY_VECTOR_2_TYPE:
 			return &dyn_get_vec2(dyn_struct->data, index);
 		case DYN_ARRAY_VECTOR_3_TYPE:
@@ -147,8 +164,16 @@ static inline void* get_dyn_array(const dyn_array* const dyn_struct, const unsig
 		case DYN_ARRAY_STRING_TYPE:
 			return &dyn_get_string(dyn_struct->data, index);
 		default:
-			return ((int*)dyn_struct->data + index*(dyn_struct->item_size));
+			return ((char*)dyn_struct->data + index*(dyn_struct->item_size));
 	}
+}
+
+static inline void* get_dyn_array_byte(const dyn_array* const dyn_struct, const unsigned int byte_index)
+{
+	if (dyn_struct == NULL) return NULL;
+	if (byte_index >= dyn_struct->current_size * dyn_struct->item_size) return NULL;
+
+	return ((char*)dyn_struct->data + byte_index);
 }
 
 static inline void* get_last_dyn_array(const dyn_array* const dyn_struct)
@@ -158,10 +183,14 @@ static inline void* get_last_dyn_array(const dyn_array* const dyn_struct)
 
 	switch (dyn_struct->type)
 	{
+		case DYN_ARRAY_CHAR_TYPE:
+			return &dyn_get_last_char(dyn_struct);
 		case DYN_ARRAY_INT_TYPE:
 			return &dyn_get_last_int(dyn_struct);
 		case DYN_ARRAY_UINT_TYPE:
 			return &dyn_get_last_uint(dyn_struct);
+		case DYN_ARRAY_UINT_64T_TYPE:
+			return &dyn_get_last_uint_64t(dyn_struct);
 		case DYN_ARRAY_VECTOR_2_TYPE:
 			return &dyn_get_last_vec2(dyn_struct);
 		case DYN_ARRAY_VECTOR_3_TYPE:
@@ -177,7 +206,7 @@ static inline void* get_last_dyn_array(const dyn_array* const dyn_struct)
 		case DYN_ARRAY_STRING_TYPE:
 			return &dyn_get_last_string(dyn_struct);
 		default:
-			return ((int*)dyn_struct->data + (dyn_struct->current_size-1)*(dyn_struct->item_size));
+			return ((char*)dyn_struct->data + (dyn_struct->current_size-1)*(dyn_struct->item_size));
 	}
 }
 
