@@ -9,18 +9,18 @@ typedef struct vector4
 	VECTOR_FLT arr[4];
 } vector4;
 
-static inline vector4* new_vec4(const VECTOR_FLT x, const VECTOR_FLT y, const VECTOR_FLT z, const VECTOR_FLT w)
-{
-	vector4* vector = (vector4*) calloc(1, sizeof(vector4));
-	set_vec4(vector, x, y, z, w);
-	return vector;
-}
 static inline void set_vec4(vector4* vector, const VECTOR_FLT x, const VECTOR_FLT y, const VECTOR_FLT z, const VECTOR_FLT w)
 {
 	get_vec4(vector->arr, 0) = x;
 	get_vec4(vector->arr, 1) = y;
 	get_vec4(vector->arr, 2) = z;
 	get_vec4(vector->arr, 3) = w;
+}
+static inline vector4* new_vec4(const VECTOR_FLT x, const VECTOR_FLT y, const VECTOR_FLT z, const VECTOR_FLT w)
+{
+	vector4* vector = (vector4*) calloc(1, sizeof(vector4));
+	set_vec4(vector, x, y, z, w);
+	return vector;
 }
 
 static inline void translate_vec4(vector4* vector, const VECTOR_FLT delta_x, const VECTOR_FLT delta_y, const VECTOR_FLT delta_z)

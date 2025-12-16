@@ -121,12 +121,6 @@ static inline struct __String* newStringN(const char* const char_arr, const int 
     return new_str;
 }
 
-// Could technically be optimised
-static inline struct __String* copyString(const struct __String* const str)
-{
-    return newStringN(getCharArr(str), lenString(str));
-}
-
 static inline int lenString(const struct __String* const str)
 {
     return str->str_length;
@@ -148,6 +142,18 @@ static inline void clearString(struct __String* const str)
     str->str_length = 0;
     __set_arr_to_min_str_length__(str, str->str_length);
     str->string[0] = '\0';
+}
+
+static inline void freeString(struct __String* const str)
+{
+    free(str->string);
+    free(str);
+}
+
+// Could technically be optimised
+static inline struct __String* copyString(const struct __String* const str)
+{
+    return newStringN(getCharArr(str), lenString(str));
 }
 
 static inline void writeChars(struct __String* const str, const char* const char_arr)
@@ -420,8 +426,8 @@ static inline int compareChars(const struct __String* const str, const char* con
         i++;
     }
     
-    if (*c == NULL && i == str->str_length) return 0;
-    else if (*c == NULL) return 1;
+    if (*c == '\0' && i == str->str_length) return 0;
+    else if (*c == '\0') return 1;
     else return -1;
 }
 

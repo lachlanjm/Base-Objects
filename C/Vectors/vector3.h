@@ -9,17 +9,17 @@ typedef struct vector3
 	VECTOR_FLT arr[3];
 } vector3;
 
-static inline vector3* new_vec3(const VECTOR_FLT x, const VECTOR_FLT y, const VECTOR_FLT z)
-{
-	vector3* vector = (vector3*) calloc(1, sizeof(vector3));
-	set_vec3(vector, x, y, z);
-	return vector;
-}
 static inline void set_vec3(vector3* vector, const VECTOR_FLT x, const VECTOR_FLT y, const VECTOR_FLT z)
 {
 	get_vec3(vector->arr, 0) = x;
 	get_vec3(vector->arr, 1) = y;
 	get_vec3(vector->arr, 2) = z;
+}
+static inline vector3* new_vec3(const VECTOR_FLT x, const VECTOR_FLT y, const VECTOR_FLT z)
+{
+	vector3* vector = (vector3*) calloc(1, sizeof(vector3));
+	set_vec3(vector, x, y, z);
+	return vector;
 }
 
 static inline void translate_vec3(vector3* vector, const VECTOR_FLT delta_x, const VECTOR_FLT delta_y, const VECTOR_FLT delta_z)

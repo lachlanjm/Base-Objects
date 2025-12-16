@@ -46,18 +46,23 @@
  */
 static inline dyn_array* hexdigest_sha512(dyn_array* const message)
 {
-    if (message->type != DYN_ARRAY_CHAR_TYPE || message->type != DYN_ARRAY_INT_TYPE
-        || message->type != DYN_ARRAY_UINT_TYPE || message->type != DYN_ARRAY_UINT_64T_TYPE
+    if (message->type != DYN_ARRAY_CHAR_TYPE && message->type != DYN_ARRAY_INT_TYPE
+        && message->type != DYN_ARRAY_UINT_TYPE && message->type != DYN_ARRAY_UINT_8T_TYPE
+        && message->type != DYN_ARRAY_UINT_16T_TYPE && message->type != DYN_ARRAY_UINT_32T_TYPE
+        && message->type != DYN_ARRAY_UINT_64T_TYPE
     ) { return NULL; }
 
     const uint64_t original_bit_length = message->current_size * message->item_size * 8;
-    pad_message_digest_length(message, SHA_512_BLOCK_BIT_LENGTH, SHA_512_LENGTH_FIELD_BIT_SIZE);
-    append_message_length(message, SHA_512_LENGTH_FIELD_BIT_SIZE, original_bit_length);
+    pad_message_digest_length(message, SHA_512_BLOCK_BIT_LENGTH, SHA_512_LENGTH_FIELD_BIT_SIZE); 
+
+    // should be 128 bits, but we only support messages < 2^64 bits for now; 0 is padded for high bits
+    append_message_length(message, 64, 0); 
+    append_message_length(message, 64, original_bit_length);
 
     const uint64_t k_vals[] = K_512_INITIALIZER;
     uint64_t h_vals[] = H_512_INITIALIZER;
-    uint64_t w_vals[80];
-    const unsigned int total_blocks = (message->current_size * message->item_size * 8) / SHA_512_BLOCK_BIT_LENGTH;
+    uint64_t w_vals[SHA_512_NUM_ROUNDS];
+    const uint64_t total_blocks = (message->current_size * message->item_size * 8) / SHA_512_BLOCK_BIT_LENGTH;
     
     for (uint64_t block_i = 0; block_i < total_blocks; block_i++)
     {
@@ -102,7 +107,7 @@ static inline dyn_array* hexdigest_sha512(dyn_array* const message)
             g = f;
             f = e;
             e = d + temp1;
-            d = a + temp1;
+            d = c;
             c = b;
             b = a;
             a = temp1 + temp2;
@@ -121,7 +126,7 @@ static inline dyn_array* hexdigest_sha512(dyn_array* const message)
     dyn_array* hex_digest = new_dyn_array(DYN_ARRAY_UINT_64T_TYPE, DYN_ARRAY_EXPANSION_FIXED);
     for (unsigned int i = 0; i < 8; i++)
     {
-        append_item_dyn_array(hex_digest, (void*)h_vals[i]);
+        append_item_dyn_array(hex_digest, &h_vals[i]);
     }
     return hex_digest;
 }

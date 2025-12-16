@@ -41,10 +41,10 @@ static inline void pad_message_digest_length(dyn_array* const message, const uns
 
 static inline void append_message_length(dyn_array* const message, const unsigned int length_field_bit_size, const uint64_t original_message_bit_length)
 {
-    // SHA-2 appends the original message length as a 64-bit big-endian integer
+    // SHA-2 appends the original message length as a big-endian integer
     for (int i = (length_field_bit_size/8-1); i >= 0; i--)
     {
-        unsigned char byte = (original_message_bit_length >> (i * 8)) & 0xFF;
+        const unsigned char byte = (original_message_bit_length >> (i * 8)) & 0xFFULL;
         void* slot = add_slot_dyn_array(message);
 
         *((unsigned char*)slot) = byte;

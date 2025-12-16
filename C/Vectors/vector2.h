@@ -9,16 +9,16 @@ typedef struct vector2
 	VECTOR_FLT arr[2];
 } vector2;
 
+static inline void set_vec2(vector2* vector, const VECTOR_FLT x, const VECTOR_FLT y)
+{
+	get_vec2(vector->arr, 0) = x;
+	get_vec2(vector->arr, 1) = y;
+}
 static inline vector2* new_vec2(const VECTOR_FLT x, const VECTOR_FLT y)
 {
 	vector2* vector = (vector2*) calloc(1, sizeof(vector2));
 	set_vec2(vector, x, y);
 	return vector;
-}
-static inline void set_vec2(vector2* vector, const VECTOR_FLT x, const VECTOR_FLT y)
-{
-	get_vec2(vector->arr, 0) = x;
-	get_vec2(vector->arr, 1) = y;
 }
 
 static inline vector2* copy_to_vec2(const vector2* base, vector2* copy)
