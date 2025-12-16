@@ -1,0 +1,28 @@
+
+# Ignore all compiled object files
+*.o
+*.obj
+# Ignore all executable files
+*.exe
+*.out
+# Ignore all temporary files created by text editors
+*~
+*.swp
+# Ignore compiled Python files
+*.pyc
+__pycache__/
+# Ignore log files
+*.log
+# Ignore coverage reports
+coverage/
+# Ignore build directories
+/build/
+/dist/
+# Ignore IDE specific files
+.vscode/
+.idea/
+# Ignore system files
+.DS_Store
+Thumbs.db
+# Ignore all files in the Playground directory
+/Playground/
