@@ -86,7 +86,54 @@ static inline String* dyn_array_to_string_base(const dyn_array* const dyn_str, c
     uint8_t bits_in_buffer = 0;
     for (int i = 0; i < dyn_str->current_size * dyn_str->item_size; i++)
     {
-        const uint8_t byte = *(uint8_t*)get_dyn_array_byte(dyn_str, i);
+        const uint8_t byte = (uint8_t)*get_dyn_array_byte(dyn_str, i);
+        buffer = (buffer << 8) | byte;
+        bits_in_buffer += 8;
+        while (bits_in_buffer >= bits_per_char)
+        {
+            bits_in_buffer -= bits_per_char;
+            const uint8_t char_i = (buffer >> bits_in_buffer) & filter;
+            appendChar(str, chars_arr[char_i]);
+        }
+    }
+    if (bits_in_buffer > 0)
+    {
+        const uint8_t char_i = buffer & filter;
+        appendChar(str, chars_arr[char_i]);
+    }
+    return str;
+}
+
+static inline String* uint64_to_string_base(const uint64_t value, const uint8_t base)
+{
+    String* const str = newEmptyString();
+
+    char* chars_arr;
+    if (base < 64)
+    {
+        chars_arr = "0123456789abcdefghijklmnopqrstuv";
+    }
+    else if (base == 64)
+    {
+        chars_arr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    }
+    else
+    {
+        chars_arr = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜ¢£¥₧ƒ";
+    }
+
+    if (base < 2 || base > 128) return str; // invalid base
+    if (base & (base - 1)) return str; // not a power of 2
+    if (base == 32 || base == 128) return str; // unsupported bases atm
+
+    const uint8_t bits_per_char = (index_of_most_significant_bit(base - 1) + 1);
+    const uint8_t filter = (1 << bits_per_char) - 1;
+    
+    uint16_t buffer = 0;
+    uint8_t bits_in_buffer = 0;
+    for (int i = 0; i < sizeof(uint64_t); i++)
+    {
+        const uint8_t byte = (uint8_t)((value >> (56 - i * 8)) & 0xFF);
         buffer = (buffer << 8) | byte;
         bits_in_buffer += 8;
         while (bits_in_buffer >= bits_per_char)

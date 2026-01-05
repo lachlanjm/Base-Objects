@@ -192,12 +192,19 @@ static inline void* get_dyn_array(const dyn_array* const dyn_struct, const unsig
 	}
 }
 
-static inline void* get_dyn_array_byte(const dyn_array* const dyn_struct, const unsigned int byte_index)
+static inline char* get_dyn_array_byte(const dyn_array* const dyn_struct, const unsigned int byte_index)
 {
 	if (dyn_struct == NULL) return NULL;
 	if (byte_index >= dyn_struct->current_size * dyn_struct->item_size) return NULL;
 
-	return ((char*)dyn_struct->data + byte_index);
+	return (((char*)dyn_struct->data) + byte_index);
+}
+
+static inline char* get_dyn_array_last_byte(const dyn_array* const dyn_struct)
+{
+	if (dyn_struct == NULL) return NULL;
+
+	return (((char*)dyn_struct->data) + dyn_struct->current_size * dyn_struct->item_size - 1);
 }
 
 static inline void* get_last_dyn_array(const dyn_array* const dyn_struct)

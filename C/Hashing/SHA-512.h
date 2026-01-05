@@ -72,7 +72,7 @@ static inline dyn_array* hexdigest_sha512(dyn_array* const message)
             w_vals[t] = 0;
             for (unsigned int byte_i = 0; byte_i < (SHA_512_WORD_SIZE/8); byte_i++)
             {
-                unsigned char byte = *((unsigned char*)get_dyn_array_byte(message, block_i * (SHA_512_BLOCK_BIT_LENGTH/8) + t * (SHA_512_WORD_SIZE/8) + byte_i));
+                unsigned char byte = (unsigned char)*get_dyn_array_byte(message, block_i * (SHA_512_BLOCK_BIT_LENGTH/8) + t * (SHA_512_WORD_SIZE/8) + byte_i);
                 w_vals[t] = (w_vals[t] << 8) | byte;
             }
         }
