@@ -40,7 +40,6 @@ enum dictionary_hash_function
 };
 #define DICTIONARY_HASH_FUNCTION_DEFAULT (DICTIONARY_HASH_FUNCTION_XXH3)
 
-// TODO implement random seeding
 // TODO allow for unspecified key/value types (void*), with user-provided hash and comparison functions (i.e. key_size & value_size parameters, function pointers, etc.)
 typedef struct Dictionary
 {
