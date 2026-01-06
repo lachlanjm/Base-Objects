@@ -41,7 +41,6 @@ enum dictionary_hash_function
 #define DICTIONARY_HASH_FUNCTION_DEFAULT (DICTIONARY_HASH_FUNCTION_XXH3)
 
 // TODO implement random seeding
-// TODO implement more key/value types; will need to allocate/free memory properly for even basic types
 // TODO allow for unspecified key/value types (void*), with user-provided hash and comparison functions (i.e. key_size & value_size parameters, function pointers, etc.)
 typedef struct Dictionary
 {
@@ -69,9 +68,10 @@ static inline void set_dictionary(Dictionary* const dict, const uint16_t array_c
     dict->first_entry = NULL;
 
     dict->hash_seeds = (uint64_t*)calloc(array_count, sizeof(uint64_t));
-    for (int i = 0; i < array_count; i++)
+    for (uint64_t i = 17; i < array_count; i++) // 17 is just a random number
     {
-        dict->hash_seeds[i] = (uint64_t)(i * 2654435761); // Example seed generation
+        // doesn't need to be random, since don't need cryptographic security, and is ok for practice (maybe not theory)
+        dict->hash_seeds[i] = i;
     }
 
     dict->entries = (struct dictionary_entry**)calloc(array_count * array_size, sizeof(struct dictionary_entry*));
