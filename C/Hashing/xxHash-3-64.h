@@ -196,7 +196,7 @@ static inline uint64_t __XXH3_64_long__(const dyn_array* const message, const ui
  * @param message Pointer to the dynamic array containing the message data.
  * @return The 64-bit hash value.
  */
-static inline uint64_t digest_XXH3_64(dyn_array* const message) 
+static inline uint64_t digest_XXH3_64(const dyn_array* const message) 
 {
     if (message->type != DYN_ARRAY_CHAR_TYPE && message->type != DYN_ARRAY_INT_TYPE
         && message->type != DYN_ARRAY_UINT_TYPE && message->type != DYN_ARRAY_UINT_8T_TYPE
@@ -231,7 +231,7 @@ static inline uint64_t digest_XXH3_64(dyn_array* const message)
  * @return The 64-bit hash value.
  * @warning Untested and unverified!
  */
-static inline uint64_t digest_XXH3_64_with_seed(dyn_array* const message, const uint64_t seed) 
+static inline uint64_t digest_XXH3_64_with_seed(const dyn_array* const message, const uint64_t seed) 
 {
     if (message->type != DYN_ARRAY_CHAR_TYPE && message->type != DYN_ARRAY_INT_TYPE
         && message->type != DYN_ARRAY_UINT_TYPE && message->type != DYN_ARRAY_UINT_8T_TYPE
@@ -268,7 +268,7 @@ static inline uint64_t digest_XXH3_64_with_seed(dyn_array* const message, const 
  * @return The 64-bit hash value.
  * @warning Untested and unverified!
  */
-static inline uint64_t digest_XXH3_64_with_secret(dyn_array* const message, const uint8_t* const secret, const uint64_t secret_length) 
+static inline uint64_t digest_XXH3_64_with_secret(const dyn_array* const message, const uint8_t* const secret, const uint64_t secret_length) 
 {
     if (message->type != DYN_ARRAY_CHAR_TYPE && message->type != DYN_ARRAY_INT_TYPE
         && message->type != DYN_ARRAY_UINT_TYPE && message->type != DYN_ARRAY_UINT_8T_TYPE
