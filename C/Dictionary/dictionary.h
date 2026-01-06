@@ -57,6 +57,7 @@ static inline void set_dictionary(Dictionary* const dict, const uint16_t array_c
     dict->value_type = value_type;
     dict->array_count = array_count;
     dict->array_size = array_size;
+    dict->first_entry = NULL;
 
     dict->hash_seeds = (uint64_t*)calloc(array_count, sizeof(uint64_t));
     for (int i = 0; i < array_count; i++)
@@ -131,6 +132,86 @@ static inline void* get_value_dictionary(const Dictionary* const dict, const voi
         default:
             return NULL; // Other key types not implemented yet
     }
+}
+
+/**
+ * Inserts a key-value pair into the dictionary.
+ * @param dict Pointer to the dictionary.
+ * @param key Pointer to the key.
+ * @param value Pointer to the value.
+ * @warning This is a simplified version and does not handle collisions or resizing.
+ * @warning This only shallow-copies the key and value pointers; proper memory management is required by the user outside of the structure.
+ */
+static inline void insert_key_value_pair_dictionary(Dictionary* const dict, const void* const key, const void* const value)
+{
+    // Implementation for inserting key-value pair
+    // Note: This is a simplified version and does not handle collisions or resizing
+    dyn_array* key_array = NULL;
+
+    switch (dict->key_type)
+    {
+        case DICTIONARY_KEY_VALUE_TYPE_STRING:
+            key_array = string_to_dyn_array((String*)key);
+            break;
+        default:
+            return; // Other key types not implemented yet
+    }
+    struct dictionary_entry* new_entry = (struct dictionary_entry*)calloc(1, sizeof(struct dictionary_entry));
+    new_entry->key = (void*)key;
+    new_entry->value = (void*)value;
+
+    uint64_t min_entry_stack = 0;
+    uint16_t min_entry_stack_array = 0;
+    uint64_t min_entry_stack_index = 0;
+    for (int i = 0; i < dict->array_count; i++)
+    {
+        const uint64_t index = compute_index_in_dictionary(dict->hash_function, dict->array_size, dict->hash_seeds[i], key_array);
+        const uint64_t entry_index = i * dict->array_size + index;
+
+        // Count entries in this bucket
+        uint64_t entry_stack = 0;
+        struct dictionary_entry* entry = dict->entries[entry_index];
+        while (entry != NULL)
+        {
+            entry_stack++;
+            entry = entry->next_in_bucket;
+        }
+
+        if (entry_stack == 0)
+        {
+            // Empty bucket, insert here
+            dict->entries[entry_index] = new_entry;
+            break;
+        }
+
+        if (entry_stack < min_entry_stack || i == 0)
+        {
+            min_entry_stack = entry_stack;
+            min_entry_stack_array = i;
+            min_entry_stack_index = index;
+        }
+    }
+
+    if (min_entry_stack > 0)
+    {
+        // Insert into the least filled bucket
+        const uint64_t entry_index = min_entry_stack_array * dict->array_size + min_entry_stack_index;
+
+        // Maybe look into sorted insertion later or something
+        // Insert into bucket (simple chaining)
+        new_entry->next_in_bucket = dict->entries[entry_index];
+        dict->entries[entry_index]->prev_in_bucket = new_entry;
+        dict->entries[entry_index] = new_entry;
+    }
+
+    new_entry->next_entry = dict->first_entry;
+    if (dict->first_entry != NULL)
+    {
+        dict->first_entry->prev_entry = new_entry;
+    }
+    dict->first_entry = new_entry;
+
+    free_dyn_array(key_array);
 }
 
 static inline void clean_dictionary(Dictionary* const dict)
