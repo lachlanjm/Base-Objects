@@ -20,6 +20,12 @@ enum dictionary_key_value_type
     DICTIONARY_KEY_VALUE_TYPE_UINT16_T,
     DICTIONARY_KEY_VALUE_TYPE_UINT32_T,
     DICTIONARY_KEY_VALUE_TYPE_UINT64_T,
+    DICTIONARY_KEY_VALUE_TYPE_VECTOR_2,  // TODO Need to flush out debugging
+	DICTIONARY_KEY_VALUE_TYPE_VECTOR_3,  // TODO Need to flush out debugging
+	DICTIONARY_KEY_VALUE_TYPE_VECTOR_4,  // TODO Need to flush out debugging
+	DICTIONARY_KEY_VALUE_TYPE_MATRIX_2X, // TODO Need to flush out debugging
+	DICTIONARY_KEY_VALUE_TYPE_MATRIX_3X, // TODO Need to flush out debugging
+	DICTIONARY_KEY_VALUE_TYPE_MATRIX_4X, // TODO Need to flush out debugging
 };
 
 struct dictionary_entry
@@ -383,7 +389,6 @@ static inline uint8_t set_value_dictionary(const Dictionary* const dict, const v
  * Deletes a key-value pair from the dictionary by key.
  * @param dict Pointer to the dictionary.
  * @param key Pointer to the key to delete.
- * @warning This is a simplified version and does not handle all edge cases.
  */
 static inline void delete_key_value_pair_dictionary(Dictionary* const dict, const void* const key)
 {

@@ -195,15 +195,10 @@ static inline uint64_t __XXH3_64_long__(const dyn_array* const message, const ui
  * Calculates the XXH3 64-bit hash of the given dynamic array message.
  * @param message Pointer to the dynamic array containing the message data.
  * @return The 64-bit hash value.
+ * @warning Any padding in a struct is included in the digest.
  */
 static inline uint64_t digest_XXH3_64(const dyn_array* const message) 
 {
-    if (message->type != DYN_ARRAY_CHAR_TYPE && message->type != DYN_ARRAY_INT_TYPE
-        && message->type != DYN_ARRAY_UINT_TYPE && message->type != DYN_ARRAY_UINT_8T_TYPE
-        && message->type != DYN_ARRAY_UINT_16T_TYPE && message->type != DYN_ARRAY_UINT_32T_TYPE
-        && message->type != DYN_ARRAY_UINT_64T_TYPE
-    ) { return 0; }
-
     const uint64_t byte_length = message->current_size * message->item_size;
 
     const uint64_t seed = XXH3_SEED_DEFAULT;
@@ -229,16 +224,11 @@ static inline uint64_t digest_XXH3_64(const dyn_array* const message)
  * @param message Pointer to the dynamic array containing the message data.
  * @param seed The seed value used for hashing.
  * @return The 64-bit hash value.
+ * @warning Any padding in a struct is included in the digest.
  * @warning Untested and unverified!
  */
 static inline uint64_t digest_XXH3_64_with_seed(const dyn_array* const message, const uint64_t seed) 
 {
-    if (message->type != DYN_ARRAY_CHAR_TYPE && message->type != DYN_ARRAY_INT_TYPE
-        && message->type != DYN_ARRAY_UINT_TYPE && message->type != DYN_ARRAY_UINT_8T_TYPE
-        && message->type != DYN_ARRAY_UINT_16T_TYPE && message->type != DYN_ARRAY_UINT_32T_TYPE
-        && message->type != DYN_ARRAY_UINT_64T_TYPE
-    ) { return 0; }
-
     const uint64_t byte_length = message->current_size * message->item_size;
     const uint64_t secret_length = 192;
 
@@ -266,16 +256,11 @@ static inline uint64_t digest_XXH3_64_with_seed(const dyn_array* const message, 
  * @param secret The secret value used for hashing. (at least 136 bytes in Little-Endian convention)
  * @param secret_length The length of the secret in bytes.
  * @return The 64-bit hash value.
+ * @warning Any padding in a struct is included in the digest.
  * @warning Untested and unverified!
  */
 static inline uint64_t digest_XXH3_64_with_secret(const dyn_array* const message, const uint8_t* const secret, const uint64_t secret_length) 
 {
-    if (message->type != DYN_ARRAY_CHAR_TYPE && message->type != DYN_ARRAY_INT_TYPE
-        && message->type != DYN_ARRAY_UINT_TYPE && message->type != DYN_ARRAY_UINT_8T_TYPE
-        && message->type != DYN_ARRAY_UINT_16T_TYPE && message->type != DYN_ARRAY_UINT_32T_TYPE
-        && message->type != DYN_ARRAY_UINT_64T_TYPE
-    ) { return 0; }
-
     if (secret_length < 136) return 0; // Minimum secret length for XXH3-64
 
     const uint64_t byte_length = message->current_size * message->item_size;
