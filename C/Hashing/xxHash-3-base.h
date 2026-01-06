@@ -15,6 +15,8 @@
                      ((x) << 56) )
 #define LOWER_HALF_32(x) ((uint32_t)(x) & 0x0000FFFFU)
 #define LOWER_HALF_64(x) ((uint64_t)(x) & 0x00000000FFFFFFFFULL)
+#define HIGHER_HALF_32(x) ((uint32_t)(x) >> 16)
+#define HIGHER_HALF_64(x) ((uint64_t)(x) >> 32)
 
 #define ROT_L32(x, r) ( ((x) << (r)) | ((x) >> (32 - (r))) )
 #define ROT_R32(x, r) ( ((x) >> (r)) | ((x) << (32 - (r))) )
@@ -69,42 +71,46 @@ static const uint8_t XXH3_defaultSecret[192] = {
   0xaf, 0xd7, 0xfb, 0xca, 0xbb, 0x4b, 0x40, 0x7e,
 };
 
-/**/
-
-/* TODO Implement for custom secret generation from seed
-deriveSecret(u64 seed):
-  u64 derivedSecret[24] = defaultSecret[0:192];
-  for (i = 0; i < 12; i++) {
-    derivedSecret[i*2] += seed;
-    derivedSecret[i*2+1] -= seed;
-  }
-  return derivedSecret; // convert to u8[192] (little-endian)
-*/
-
-static inline uint32_t read_32_LE(const void* ptr) 
+static inline uint32_t read_32_LE(const void* const ptr) 
 {
-    const uint8_t* p = (const uint8_t*)ptr;
+    const uint8_t* const p = (const uint8_t* const)ptr;
     return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
 }
-static inline uint64_t read_64_LE(const void* ptr) 
+static inline uint64_t read_64_LE(const void* const ptr) 
 {
-    const uint8_t* p = (const uint8_t*)ptr;
+    const uint8_t* const p = (const uint8_t* const)ptr;
     return (uint64_t)p[0] | ((uint64_t)p[1] << 8) | ((uint64_t)p[2] << 16) | ((uint64_t)p[3] << 24)
          | ((uint64_t)p[4] << 32) | ((uint64_t)p[5] << 40) | ((uint64_t)p[6] << 48) | ((uint64_t)p[7] << 56);
 }
-static inline uint32_t read_32_BE(const void* ptr) 
+static inline uint32_t read_32_BE(const void* const ptr) 
 {
-    const uint8_t* p = (const uint8_t*)ptr;
+    const uint8_t* const p = (const uint8_t* const)ptr;
     return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | ((uint32_t)p[3]);
 }
-static inline uint64_t read_64_BE(const void* ptr) 
+static inline uint64_t read_64_BE(const void* const ptr) 
 {
-    const uint8_t* p = (const uint8_t*)ptr;
+    const uint8_t* const p = (const uint8_t* const)ptr;
     return ((uint64_t)p[0] << 56) | ((uint64_t)p[1] << 48) | ((uint64_t)p[2] << 40) | ((uint64_t)p[3] << 32)
          | ((uint64_t)p[4] << 24) | ((uint64_t)p[5] << 16) | ((uint64_t)p[6] << 8) | ((uint64_t)p[7]);
 }
 
-#define XXH3_AVALANCHE(x) ((((x) ^ ((x) >> 37)) * PRIME_MX1) ^ ((((x) ^ ((x) >> 37)) * PRIME_MX1) >> 32))
+/**
+ * Derives a secret from the default secret and a given seed.
+ * This function modifies the provided derivedSecret array in place.
+ * @param derivedSecret A pointer to a 192-byte array where the derived secret will be stored.
+ * @param seed The seed value used for deriving the secret.
+ */
+static inline void XXH3_derive_secret(uint8_t* const derived_secret, const uint64_t seed) 
+{
+    for (int x = 0; x < 24; x++) ((uint64_t*)derived_secret)[x] = read_64_LE(XXH3_defaultSecret + x * 8);
+
+    for (int i = 0; i < 12; i++) 
+    {
+        ((uint64_t*)derived_secret)[i*2 + 0] = BSWAP64(read_64_LE(XXH3_defaultSecret + i * 16) + seed);
+        ((uint64_t*)derived_secret)[i*2 + 1] = BSWAP64(read_64_LE(XXH3_defaultSecret + i * 16 + 8) - seed);
+    }
+}
+
 static inline uint64_t XXH3_avalanche(uint64_t x) 
 {
     x = x ^ (x >> 37);
@@ -113,7 +119,6 @@ static inline uint64_t XXH3_avalanche(uint64_t x)
     return x;
 }
 
-#define XXH3_AVALANCHE_XXH64(x) ((((((x) ^ ((x) >> 33)) * PRIME64_2) ^ ((((x) ^ ((x) >> 33)) * PRIME64_2) >> 29)) * PRIME64_3) ^ ((((((x) ^ ((x) >> 33)) * PRIME64_2) ^ ((((x) ^ ((x) >> 33)) * PRIME64_2) >> 29)) * PRIME64_3) >> 32))
 static inline uint64_t XXH3_avalanche_XXH64(uint64_t x)
 {
     x = x ^ (x >> 33);
@@ -129,6 +134,111 @@ static inline uint64_t XXH3_mix_step_XXH64(const uint64_t data_word_1, const uin
     const uint64_t left = data_word_1 ^ (secret_word_1 + seed);
     const uint64_t right = data_word_2 ^ (secret_word_2 - seed);
     return MUL_HI_64_128(left, right) ^ (left * right);
+}
+
+static inline void XXH3_accumulate(uint64_t acc[8], const uint64_t stripe[8], const uint8_t* const secret_offset_ptr)
+{
+    const uint64_t secret_words[8] = {
+        read_64_LE(secret_offset_ptr),
+        read_64_LE(secret_offset_ptr + 8),
+        read_64_LE(secret_offset_ptr + 16),
+        read_64_LE(secret_offset_ptr + 24),
+        read_64_LE(secret_offset_ptr + 32),
+        read_64_LE(secret_offset_ptr + 40),
+        read_64_LE(secret_offset_ptr + 48),
+        read_64_LE(secret_offset_ptr + 56),
+    };
+    for (int i = 0; i < 8; i++) {
+        const uint64_t value = stripe[i] ^ secret_words[i];
+        acc[i ^ 1] = acc[i ^ 1] + stripe[i];
+        acc[i] = acc[i] + LOWER_HALF_64(value) * HIGHER_HALF_64(value);
+    }
+}
+
+static inline void XXH3_round_accumulate(uint64_t acc[8], const uint8_t* const block, const uint64_t stripes_per_block, const uint8_t* const secret)
+{
+    for (int n = 0; n < stripes_per_block; n++) 
+    {
+        const uint64_t stripe[8] = {
+            read_64_LE(block + n*64 + 0),
+            read_64_LE(block + n*64 + 8),
+            read_64_LE(block + n*64 + 16),
+            read_64_LE(block + n*64 + 24),
+            read_64_LE(block + n*64 + 32),
+            read_64_LE(block + n*64 + 40),
+            read_64_LE(block + n*64 + 48),
+            read_64_LE(block + n*64 + 56),
+        };
+        XXH3_accumulate(acc, stripe, secret + n*8);
+    }
+}
+
+static inline void XXH3_round_scramble(uint64_t acc[8], const uint8_t* const secret_offset_ptr)
+{
+    const uint64_t secretWords[8] = {
+        read_64_LE(secret_offset_ptr),
+        read_64_LE(secret_offset_ptr + 8),
+        read_64_LE(secret_offset_ptr + 16),
+        read_64_LE(secret_offset_ptr + 24),
+        read_64_LE(secret_offset_ptr + 32),
+        read_64_LE(secret_offset_ptr + 40),
+        read_64_LE(secret_offset_ptr + 48),
+        read_64_LE(secret_offset_ptr + 56),
+    };
+    for (int i = 0; i < 8; i++) 
+    {
+        acc[i] = acc[i] ^ (acc[i] >> 47);
+        acc[i] = acc[i] ^ secretWords[i];
+        acc[i] = acc[i] * PRIME32_1;
+    }
+}
+
+static inline void XXH3_last_round(
+    uint64_t acc[8], 
+    const uint8_t* const message_offset, 
+    const uint8_t* const message_last_stripe, 
+    const uint64_t remaining_stripes, 
+    const uint8_t* const secret, 
+    const uint64_t secret_length
+) {
+    XXH3_round_accumulate(acc, message_offset, remaining_stripes, secret);
+    
+    const uint64_t last_stripe[8] = {
+        read_64_LE(message_last_stripe),
+        read_64_LE(message_last_stripe + 8),
+        read_64_LE(message_last_stripe + 16),
+        read_64_LE(message_last_stripe + 24),
+        read_64_LE(message_last_stripe + 32),
+        read_64_LE(message_last_stripe + 40),
+        read_64_LE(message_last_stripe + 48),
+        read_64_LE(message_last_stripe + 56),
+    };
+    XXH3_accumulate(acc, last_stripe, secret + secret_length - 71);
+}
+
+static inline uint64_t XXH3_final_merge(const uint64_t acc[8], const uint64_t init_value, const uint8_t* const secret_offset_ptr)
+{
+    const uint64_t secret_words[8] = {
+        read_64_LE(secret_offset_ptr),
+        read_64_LE(secret_offset_ptr + 8),
+        read_64_LE(secret_offset_ptr + 16),
+        read_64_LE(secret_offset_ptr + 24),
+        read_64_LE(secret_offset_ptr + 32),
+        read_64_LE(secret_offset_ptr + 40),
+        read_64_LE(secret_offset_ptr + 48),
+        read_64_LE(secret_offset_ptr + 56),
+    };
+
+    uint64_t result = init_value;
+    for (int i = 0; i < 4; i++) 
+    {
+        const uint64_t left  = acc[i*2] ^ secret_words[i*2];
+        const uint64_t right = acc[i*2 + 1] ^ secret_words[i*2 + 1];
+        const uint64_t high = MUL_HI_64_128(left, right);
+        const uint64_t low  = left * right;
+        result = result + (high ^ low);
+    }
+    return XXH3_avalanche(result);
 }
 
 #endif
