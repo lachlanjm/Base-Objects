@@ -14,8 +14,12 @@
 enum dictionary_key_value_type
 {
     DICTIONARY_KEY_VALUE_TYPE_STRING,
-    DICTIONARY_KEY_VALUE_TYPE_INT, // need to implement
-    DICTIONARY_KEY_VALUE_TYPE_UINT, // need to implement
+    DICTIONARY_KEY_VALUE_TYPE_INT, // TODO Need to flush out debugging
+    DICTIONARY_KEY_VALUE_TYPE_UINT,
+    DICTIONARY_KEY_VALUE_TYPE_UINT8_T,
+    DICTIONARY_KEY_VALUE_TYPE_UINT16_T,
+    DICTIONARY_KEY_VALUE_TYPE_UINT32_T,
+    DICTIONARY_KEY_VALUE_TYPE_UINT64_T,
 };
 
 struct dictionary_entry
@@ -101,14 +105,33 @@ static inline uint64_t compute_index_in_dictionary(const enum dictionary_hash_fu
     return compute_hash(hash_function, seed, key) % array_size;
 }
 
+/**
+ * Converts a key of various types to a dynamic array for hashing.
+ * @param key_type The type of the key.
+ * @param key Pointer to the key.
+ * @return Pointer to a dyn_array representing the key, or NULL if the key type is unsupported.
+ * @warning The caller is responsible for freeing the returned dyn_array.
+ */
 static inline dyn_array* __dictionary_key_to_dyn_array__(const enum dictionary_key_value_type key_type, const void* const key)
 {
     switch (key_type)
     {
         case DICTIONARY_KEY_VALUE_TYPE_STRING:
             return string_to_dyn_array((String*)key);
+        case DICTIONARY_KEY_VALUE_TYPE_INT:
+            return int_to_dyn_array(*(const int*)key);
+        case DICTIONARY_KEY_VALUE_TYPE_UINT:
+            return uint_to_dyn_array(*(const unsigned int*)key);
+        case DICTIONARY_KEY_VALUE_TYPE_UINT8_T:
+            return uint8_t_to_dyn_array(*(const uint8_t*)key);
+        case DICTIONARY_KEY_VALUE_TYPE_UINT16_T:
+            return uint16_t_to_dyn_array(*(const uint16_t*)key);
+        case DICTIONARY_KEY_VALUE_TYPE_UINT32_T:
+            return uint32_t_to_dyn_array(*(const uint32_t*)key);
+        case DICTIONARY_KEY_VALUE_TYPE_UINT64_T:
+            return uint64_t_to_dyn_array(*(const uint64_t*)key);
         default:
-            return NULL; // Other key types not implemented yet
+            return ptr_to_dyn_array(key); // Other key types not implemented yet
     }
 }
 
@@ -133,6 +156,34 @@ static inline int __uint_compare__(const void* a, const void* b)
     return (uint_a > uint_b) - (uint_a < uint_b);
 }
 
+static inline int __uint8_t_compare__(const void* a, const void* b)
+{
+    uint8_t uint_a = *(const uint8_t*)a;
+    uint8_t uint_b = *(const uint8_t*)b;
+    return (uint_a > uint_b) - (uint_a < uint_b);
+}
+
+static inline int __uint16_t_compare__(const void* a, const void* b)
+{
+    uint16_t uint_a = *(const uint16_t*)a;
+    uint16_t uint_b = *(const uint16_t*)b;
+    return (uint_a > uint_b) - (uint_a < uint_b);
+}
+
+static inline int __uint32_t_compare__(const void* a, const void* b)
+{
+    uint32_t uint_a = *(const uint32_t*)a;
+    uint32_t uint_b = *(const uint32_t*)b;
+    return (uint_a > uint_b) - (uint_a < uint_b);
+}
+
+static inline int __uint64_t_compare__(const void* a, const void* b)
+{
+    uint64_t uint_a = *(const uint64_t*)a;
+    uint64_t uint_b = *(const uint64_t*)b;
+    return (uint_a > uint_b) - (uint_a < uint_b);
+}
+
 static inline int __String_compare__(const void* a, const void* b)
 {
     return compareString((const String*)a, (const String*)b);
@@ -148,6 +199,14 @@ static inline comparator_func __get_dictionary_key_compare_function__(const enum
             return &__int_compare__;
         case DICTIONARY_KEY_VALUE_TYPE_UINT:
             return &__uint_compare__;
+        case DICTIONARY_KEY_VALUE_TYPE_UINT8_T:
+            return &__uint8_t_compare__;
+        case DICTIONARY_KEY_VALUE_TYPE_UINT16_T:
+            return &__uint16_t_compare__;
+        case DICTIONARY_KEY_VALUE_TYPE_UINT32_T:
+            return &__uint32_t_compare__;
+        case DICTIONARY_KEY_VALUE_TYPE_UINT64_T:
+            return &__uint64_t_compare__;
         default:
             return &__ptr_compare__;
     }
@@ -161,7 +220,7 @@ static inline comparator_func __get_dictionary_key_compare_function__(const enum
  */
 static inline void* get_value_dictionary(const Dictionary* const dict, const void* const key)
 {
-    const dyn_array* const key_array = __dictionary_key_to_dyn_array__(dict->key_type, key);
+    dyn_array* const key_array = __dictionary_key_to_dyn_array__(dict->key_type, key);
     const comparator_func key_compare_func = __get_dictionary_key_compare_function__(dict->key_type);
     
     for (int i = 0; i < dict->array_count; i++)
@@ -190,19 +249,21 @@ static inline void* get_value_dictionary(const Dictionary* const dict, const voi
  * @param dict Pointer to the dictionary.
  * @param key Pointer to the key.
  * @param value Pointer to the value.
- * @warning This is a simplified version and does not handle collisions or resizing.
+ * @return Returns 0 on success, else error (1 duplicate key found; 2 other)
  * @warning This only shallow-copies the key and value pointers; proper memory management is required by the user outside of the structure.
  */
-static inline void insert_key_value_pair_dictionary(Dictionary* const dict, const void* const key, const void* const value)
+static inline uint8_t insert_key_value_pair_dictionary(Dictionary* const dict, const void* const key, const void* const value)
 {
     // Implementation for inserting key-value pair
-    // Note: This is a simplified version and does not handle collisions or resizing
-    const dyn_array* const key_array = __dictionary_key_to_dyn_array__(dict->key_type, key);
-
+    dyn_array* const key_array = __dictionary_key_to_dyn_array__(dict->key_type, key);
+    const comparator_func key_compare_func = __get_dictionary_key_compare_function__(dict->key_type);
 
     struct dictionary_entry* new_entry = (struct dictionary_entry*)calloc(1, sizeof(struct dictionary_entry));
     new_entry->key = (void*)key;
     new_entry->value = (void*)value;
+
+    uint8_t return_code = 2;
+    uint8_t added_entry = 0;
 
     uint64_t min_entry_stack = 0;
     uint16_t min_entry_stack_array = 0;
@@ -217,16 +278,16 @@ static inline void insert_key_value_pair_dictionary(Dictionary* const dict, cons
         struct dictionary_entry* entry = dict->entries[entry_index];
         while (entry != NULL)
         {
+            if (key_compare_func(entry->key, key) == 0)
+            {
+                return_code = 1;
+                break;
+            }
+
             entry_stack++;
             entry = entry->next_in_bucket;
         }
-
-        if (entry_stack == 0)
-        {
-            // Empty bucket, insert here
-            dict->entries[entry_index] = new_entry;
-            break;
-        }
+        if (return_code == 1) break;
 
         if (entry_stack < min_entry_stack || i == 0)
         {
@@ -236,26 +297,87 @@ static inline void insert_key_value_pair_dictionary(Dictionary* const dict, cons
         }
     }
 
-    if (min_entry_stack > 0)
+    if (added_entry == 0 && return_code != 1)
     {
         // Insert into the least filled bucket
         const uint64_t entry_index = min_entry_stack_array * dict->array_size + min_entry_stack_index;
 
-        // Maybe look into sorted insertion later or something
-        // Insert into bucket (simple chaining)
-        new_entry->next_in_bucket = dict->entries[entry_index];
-        dict->entries[entry_index]->prev_in_bucket = new_entry;
-        dict->entries[entry_index] = new_entry;
+        if (min_entry_stack == 0)
+        {
+            // Empty bucket, insert here
+            dict->entries[entry_index] = new_entry;
+        }
+        else
+        {
+            // Maybe look into sorted insertion later or something
+            // Insert into bucket (simple chaining)
+            new_entry->next_in_bucket = dict->entries[entry_index];
+            dict->entries[entry_index]->prev_in_bucket = new_entry;
+            dict->entries[entry_index] = new_entry;
+        }
+
+        added_entry = 1;
+        return_code = 0;
+    }
+    
+    free_dyn_array(key_array);
+
+    if (added_entry)
+    {
+        new_entry->next_entry = dict->first_entry;
+        if (dict->first_entry != NULL)
+        {
+            dict->first_entry->prev_entry = new_entry;
+        }
+        dict->first_entry = new_entry;
     }
 
-    new_entry->next_entry = dict->first_entry;
-    if (dict->first_entry != NULL)
+    return return_code;
+}
+
+/**
+ * Retrieves the value associated with a given key in the dictionary.
+ * @param dict Pointer to the dictionary.
+ * @param key Pointer to the key to update.
+ * @param value Pointer to the new value.
+ * @return Returns 0 on success, else error (1 key not found; 2 other)
+ */
+static inline uint8_t set_value_dictionary(const Dictionary* const dict, const void* const key, const void* const value)
+{
+    dyn_array* const key_array = __dictionary_key_to_dyn_array__(dict->key_type, key);
+    const comparator_func key_compare_func = __get_dictionary_key_compare_function__(dict->key_type);
+
+    uint8_t key_found = 0;
+    uint8_t return_code = 2;
+    
+    int i = 0;
+    for (; i < dict->array_count; i++)
     {
-        dict->first_entry->prev_entry = new_entry;
+        const uint64_t index = compute_index_in_dictionary(dict->hash_function, dict->array_size, dict->hash_seeds[i], key_array);
+        const uint64_t entry_index = i * dict->array_size + index;
+
+        struct dictionary_entry* entry = dict->entries[entry_index];
+        while (entry != NULL)
+        {
+            if (key_compare_func(entry->key, key) == 0)
+            {
+                key_found = 1;
+
+                entry->value = value;
+
+                return_code = 0;
+                break;
+            }
+            entry = entry->next_in_bucket;
+        }
     }
-    dict->first_entry = new_entry;
+    if (key_found == 0 && i == dict->array_count)
+    {
+        return_code = 1;
+    }
 
     free_dyn_array(key_array);
+    return return_code;
 }
 
 /**
@@ -268,7 +390,7 @@ static inline void delete_key_value_pair_dictionary(Dictionary* const dict, cons
 {
     // Implementation for deleting key-value pair by key
     // Note: This is a simplified version and does not handle all edge cases
-    const dyn_array* const key_array = __dictionary_key_to_dyn_array__(dict->key_type, key);
+    dyn_array* const key_array = __dictionary_key_to_dyn_array__(dict->key_type, key);
     const comparator_func key_compare_func = __get_dictionary_key_compare_function__(dict->key_type);
 
     for (int i = 0; i < dict->array_count; i++)
@@ -329,7 +451,9 @@ static inline void delete_key_value_pair_dictionary(Dictionary* const dict, cons
 static inline String* get_dictionary_entries_key_values_string(const Dictionary* const dict)
 {
     String* result = newString("");
+
     char buf[DICTIONARY_OUTPUT_PTR_BUFFER_SIZE];
+    String* value_buf;
 
     struct dictionary_entry* entry = dict->first_entry;
     while (entry != NULL)
@@ -340,6 +464,33 @@ static inline String* get_dictionary_entries_key_values_string(const Dictionary*
             case DICTIONARY_KEY_VALUE_TYPE_STRING:
                 appendString(result, (String*)entry->key);
                 break;
+            case DICTIONARY_KEY_VALUE_TYPE_UINT:
+                value_buf = uint64_to_string_base((uint64_t)*((unsigned int*)entry->key), 16);
+                appendString(result, value_buf);
+                freeString(value_buf);
+                break;
+            case DICTIONARY_KEY_VALUE_TYPE_UINT8_T:
+                value_buf = uint8_to_string_base(*((uint8_t*)entry->key), 16);
+                appendString(result, value_buf);
+                freeString(value_buf);
+                break;
+            case DICTIONARY_KEY_VALUE_TYPE_UINT16_T:
+                value_buf = uint16_to_string_base(*((uint16_t*)entry->key), 16);
+                appendString(result, value_buf);
+                freeString(value_buf);
+                break;
+            case DICTIONARY_KEY_VALUE_TYPE_UINT32_T:
+                value_buf = uint32_to_string_base(*((uint32_t*)entry->key), 16);
+                appendString(result, value_buf);
+                freeString(value_buf);
+                break;
+            case DICTIONARY_KEY_VALUE_TYPE_UINT64_T:
+                value_buf = uint64_to_string_base(*((uint64_t*)entry->key), 16);
+                appendString(result, value_buf);
+                freeString(value_buf);
+                break;
+            
+            case DICTIONARY_KEY_VALUE_TYPE_INT:
             default:
                 snprintf(buf, DICTIONARY_OUTPUT_PTR_BUFFER_SIZE, "%p", entry->key);
                 appendChars(result, buf);
@@ -351,6 +502,33 @@ static inline String* get_dictionary_entries_key_values_string(const Dictionary*
             case DICTIONARY_KEY_VALUE_TYPE_STRING:
                 appendString(result, (String*)entry->value);
                 break;
+            case DICTIONARY_KEY_VALUE_TYPE_UINT:
+                value_buf = uint64_to_string_base((uint64_t)*((unsigned int*)entry->value), 16);
+                appendString(result, value_buf);
+                freeString(value_buf);
+                break;
+            case DICTIONARY_KEY_VALUE_TYPE_UINT8_T:
+                value_buf = uint8_to_string_base(*((uint8_t*)entry->value), 16);
+                appendString(result, value_buf);
+                freeString(value_buf);
+                break;
+            case DICTIONARY_KEY_VALUE_TYPE_UINT16_T:
+                value_buf = uint16_to_string_base(*((uint16_t*)entry->value), 16);
+                appendString(result, value_buf);
+                freeString(value_buf);
+                break;
+            case DICTIONARY_KEY_VALUE_TYPE_UINT32_T:
+                value_buf = uint32_to_string_base(*((uint32_t*)entry->value), 16);
+                appendString(result, value_buf);
+                freeString(value_buf);
+                break;
+            case DICTIONARY_KEY_VALUE_TYPE_UINT64_T:
+                value_buf = uint64_to_string_base(*((uint64_t*)entry->value), 16);
+                appendString(result, value_buf);
+                freeString(value_buf);
+                break;
+            
+            case DICTIONARY_KEY_VALUE_TYPE_INT:
             default:
                 snprintf(buf, DICTIONARY_OUTPUT_PTR_BUFFER_SIZE, "%p", entry->value);
                 appendChars(result, buf);

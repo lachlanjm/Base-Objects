@@ -176,15 +176,15 @@ static inline uint64_t __XXH3_64_long__(const dyn_array* const message, const ui
     for (uint64_t block_i = 0; block_i < block_rounds; block_i++) 
     {
         const uint64_t block_index = block_i * block_size;
-        XXH3_round_accumulate(acc, get_dyn_array_byte(message, block_index), stripes_per_block, secret);
+        XXH3_round_accumulate(acc, (uint8_t*)get_dyn_array_byte(message, block_index), stripes_per_block, secret);
         XXH3_round_scramble(acc, secret + secret_length - 64);
     }
 
     const uint64_t remaining_bytes = byte_length - (block_rounds * block_size);
     const uint64_t remaining_stripes = (remaining_bytes - 1) / 64;
 
-    const uint8_t* const message_offset = get_dyn_array_byte(message, block_rounds * block_size);
-    const uint8_t* const message_last_stripe = get_dyn_array_byte(message, byte_length - 64);
+    const uint8_t* const message_offset = (uint8_t*)get_dyn_array_byte(message, block_rounds * block_size);
+    const uint8_t* const message_last_stripe = (uint8_t*)get_dyn_array_byte(message, byte_length - 64);
 
     XXH3_last_round(acc, message_offset, message_last_stripe, remaining_stripes, secret, secret_length);
     
