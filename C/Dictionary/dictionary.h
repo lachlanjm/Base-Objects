@@ -7,6 +7,9 @@
 #include "../Conversions/conversions.h"
 
 #include <stdint.h>
+#include <stdio.h>
+
+#define DICTIONARY_OUTPUT_PTR_BUFFER_SIZE 256
 
 enum dictionary_key_value_type
 {
@@ -49,6 +52,8 @@ typedef struct Dictionary
     struct dictionary_entry* first_entry;
     struct dictionary_entry** entries;
 } Dictionary;
+
+typedef int(*comparator_func)(const void*, const void*); // return 0 on equality
 
 static inline void set_dictionary(Dictionary* const dict, const uint16_t array_count, const uint64_t array_size, const enum dictionary_hash_function hash_function, const enum dictionary_key_value_type key_type, const enum dictionary_key_value_type value_type)
 {
@@ -96,10 +101,68 @@ static inline uint64_t compute_index_in_dictionary(const enum dictionary_hash_fu
     return compute_hash(hash_function, seed, key) % array_size;
 }
 
-static inline void* __get_value_dictionary_key_string__(const Dictionary* const dict, const String* const key)
+static inline dyn_array* __dictionary_key_to_dyn_array__(const enum dictionary_key_value_type key_type, const void* const key)
 {
-    // Implementation for retrieving value by string key
-    dyn_array* key_array = string_to_dyn_array(key);
+    switch (key_type)
+    {
+        case DICTIONARY_KEY_VALUE_TYPE_STRING:
+            return string_to_dyn_array((String*)key);
+        default:
+            return NULL; // Other key types not implemented yet
+    }
+}
+
+static inline int __ptr_compare__(const void* a, const void* b)
+{
+    if (a < b) return -1;
+    if (a > b) return 1;
+    return 0;
+}
+
+static inline int __int_compare__(const void* a, const void* b)
+{
+    int int_a = *(const int*)a;
+    int int_b = *(const int*)b;
+    return (int_a > int_b) - (int_a < int_b);
+}
+
+static inline int __uint_compare__(const void* a, const void* b)
+{
+    unsigned int uint_a = *(const unsigned int*)a;
+    unsigned int uint_b = *(const unsigned int*)b;
+    return (uint_a > uint_b) - (uint_a < uint_b);
+}
+
+static inline int __String_compare__(const void* a, const void* b)
+{
+    return compareString((const String*)a, (const String*)b);
+}
+
+static inline comparator_func __get_dictionary_key_compare_function__(const enum dictionary_key_value_type key_type)
+{
+    switch (key_type)
+    {
+        case DICTIONARY_KEY_VALUE_TYPE_STRING:
+            return &__String_compare__;
+        case DICTIONARY_KEY_VALUE_TYPE_INT:
+            return &__int_compare__;
+        case DICTIONARY_KEY_VALUE_TYPE_UINT:
+            return &__uint_compare__;
+        default:
+            return &__ptr_compare__;
+    }
+}
+
+/**
+ * Retrieves the value associated with a given key in the dictionary.
+ * @param dict Pointer to the dictionary.
+ * @param key Pointer to the key.
+ * @return Pointer to the value associated with the key, or NULL if the key is not found.
+ */
+static inline void* get_value_dictionary(const Dictionary* const dict, const void* const key)
+{
+    const dyn_array* const key_array = __dictionary_key_to_dyn_array__(dict->key_type, key);
+    const comparator_func key_compare_func = __get_dictionary_key_compare_function__(dict->key_type);
     
     for (int i = 0; i < dict->array_count; i++)
     {
@@ -109,10 +172,9 @@ static inline void* __get_value_dictionary_key_string__(const Dictionary* const 
         struct dictionary_entry* entry = dict->entries[entry_index];
         while (entry != NULL)
         {
-            String* entry_key = (String*)entry->key;
-            if (compareString(entry_key, key) == 0)
+            if (key_compare_func(entry->key, key) == 0)
             {
-                free_dyn_array((dyn_array*)key_array);
+                free_dyn_array(key_array);
                 return entry->value;
             }
             entry = entry->next_in_bucket;
@@ -121,17 +183,6 @@ static inline void* __get_value_dictionary_key_string__(const Dictionary* const 
 
     free_dyn_array(key_array);
     return NULL;
-}
-
-static inline void* get_value_dictionary(const Dictionary* const dict, const void* const key)
-{
-    switch (dict->key_type)
-    {
-        case DICTIONARY_KEY_VALUE_TYPE_STRING:
-            return __get_value_dictionary_key_string__(dict, (String*)key);
-        default:
-            return NULL; // Other key types not implemented yet
-    }
 }
 
 /**
@@ -146,16 +197,9 @@ static inline void insert_key_value_pair_dictionary(Dictionary* const dict, cons
 {
     // Implementation for inserting key-value pair
     // Note: This is a simplified version and does not handle collisions or resizing
-    dyn_array* key_array = NULL;
+    const dyn_array* const key_array = __dictionary_key_to_dyn_array__(dict->key_type, key);
 
-    switch (dict->key_type)
-    {
-        case DICTIONARY_KEY_VALUE_TYPE_STRING:
-            key_array = string_to_dyn_array((String*)key);
-            break;
-        default:
-            return; // Other key types not implemented yet
-    }
+
     struct dictionary_entry* new_entry = (struct dictionary_entry*)calloc(1, sizeof(struct dictionary_entry));
     new_entry->key = (void*)key;
     new_entry->value = (void*)value;
@@ -214,6 +258,110 @@ static inline void insert_key_value_pair_dictionary(Dictionary* const dict, cons
     free_dyn_array(key_array);
 }
 
+/**
+ * Deletes a key-value pair from the dictionary by key.
+ * @param dict Pointer to the dictionary.
+ * @param key Pointer to the key to delete.
+ * @warning This is a simplified version and does not handle all edge cases.
+ */
+static inline void delete_key_value_pair_dictionary(Dictionary* const dict, const void* const key)
+{
+    // Implementation for deleting key-value pair by key
+    // Note: This is a simplified version and does not handle all edge cases
+    const dyn_array* const key_array = __dictionary_key_to_dyn_array__(dict->key_type, key);
+    const comparator_func key_compare_func = __get_dictionary_key_compare_function__(dict->key_type);
+
+    for (int i = 0; i < dict->array_count; i++)
+    {
+        const uint64_t index = compute_index_in_dictionary(dict->hash_function, dict->array_size, dict->hash_seeds[i], key_array);
+        const uint64_t entry_index = i * dict->array_size + index;
+
+        struct dictionary_entry* entry = dict->entries[entry_index];
+        while (entry != NULL)
+        {
+            if (key_compare_func(entry->key, key) == 0)
+            {
+                // Found the entry to delete
+                if (entry->prev_in_bucket != NULL)
+                {
+                    entry->prev_in_bucket->next_in_bucket = entry->next_in_bucket;
+                }
+                else
+                {
+                    dict->entries[entry_index] = entry->next_in_bucket;
+                }
+                if (entry->next_in_bucket != NULL)
+                {
+                    entry->next_in_bucket->prev_in_bucket = entry->prev_in_bucket;
+                }
+
+                // Remove from linked list of all entries
+                if (entry->prev_entry != NULL)
+                {
+                    entry->prev_entry->next_entry = entry->next_entry;
+                }
+                else
+                {
+                    dict->first_entry = entry->next_entry;
+                }
+                if (entry->next_entry != NULL)
+                {
+                    entry->next_entry->prev_entry = entry->prev_entry;
+                }
+
+                free(entry);
+                free_dyn_array(key_array);
+                return;
+            }
+            entry = entry->next_in_bucket;
+        }
+    }
+
+    free_dyn_array(key_array);
+}
+
+/**
+ * Generates a string representation of all key-value pairs in the dictionary.
+ * @param dict Pointer to the dictionary.
+ * @return Pointer to a String containing the key-value pairs.
+ * @warning The caller is responsible for freeing the returned String.
+ */
+static inline String* get_dictionary_entries_key_values_string(const Dictionary* const dict)
+{
+    String* result = newString("");
+    char buf[DICTIONARY_OUTPUT_PTR_BUFFER_SIZE];
+
+    struct dictionary_entry* entry = dict->first_entry;
+    while (entry != NULL)
+    {
+        appendCharsN(result, "Key: ", 5);
+        switch (dict->key_type)
+        {
+            case DICTIONARY_KEY_VALUE_TYPE_STRING:
+                appendString(result, (String*)entry->key);
+                break;
+            default:
+                snprintf(buf, DICTIONARY_OUTPUT_PTR_BUFFER_SIZE, "%p", entry->key);
+                appendChars(result, buf);
+                break;
+        }
+        appendCharsN(result, ", Value: ", 9);
+        switch (dict->value_type)
+        {
+            case DICTIONARY_KEY_VALUE_TYPE_STRING:
+                appendString(result, (String*)entry->value);
+                break;
+            default:
+                snprintf(buf, DICTIONARY_OUTPUT_PTR_BUFFER_SIZE, "%p", entry->value);
+                appendChars(result, buf);
+                break;
+        }
+        appendCharsN(result, "\n", 1);
+        entry = entry->next_entry;
+    }
+    return result;
+}
+
 static inline void clean_dictionary(Dictionary* const dict)
 {
     if (dict->hash_seeds != NULL) free(dict->hash_seeds);
@@ -221,36 +369,12 @@ static inline void clean_dictionary(Dictionary* const dict)
 
     if (dict->entries != NULL)
     {
-        for (int i = 0; i < dict->array_count * dict->array_size; i++)
+        struct dictionary_entry* entry = dict->first_entry;
+        while (entry != NULL)
         {
-            struct dictionary_entry* entry = dict->entries[i];
-            while (entry != NULL)
-            {
-                struct dictionary_entry* next_entry = entry->next_in_bucket;
-
-                switch (dict->key_type)
-                {
-                    case DICTIONARY_KEY_VALUE_TYPE_STRING:
-                        String* key_str = (String*)entry->key;
-                        if (key_str != NULL) freeString(key_str);
-                        break;
-                    default:
-                        break; // Other key types not implemented yet
-                }
-
-                switch (dict->value_type)
-                {
-                    case DICTIONARY_KEY_VALUE_TYPE_STRING:
-                        String* value_str = (String*)entry->value;
-                        if (value_str != NULL) freeString(value_str);
-                        break;
-                    default:
-                        break; // Other key types not implemented yet
-                }
-
-                free(entry);
-                entry = next_entry;
-            }
+            struct dictionary_entry* const next_entry = entry->next_entry;
+            free(entry);
+            entry = next_entry;
         }
         free(dict->entries);
     }
