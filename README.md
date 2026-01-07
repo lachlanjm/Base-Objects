@@ -82,17 +82,17 @@ Currently supported type conversions
 - uint32_t to String using base notation
 - uint64_t to String using base notation
 - String to uint64_t using base notation
-- int to dyn_array [int] using base notation
-- unsigned int to dyn_array [unsigned int] using base notation
-- uint8_t to dyn_array [uint8_t] using base notation
-- uint16_t to dyn_array [uint16_t] using base notation
-- uint32_t to dyn_array [uint32_t] using base notation
-- uint64_t to dyn_array [uint64_t] using base notation
-- ptr to dyn_array [uint64_t] using base notation
-- vector2 to dyn_array [vector2] using base notation
-- vector3 to dyn_array [vector3] using base notation
-- vector4 to dyn_array [vector4] using base notation
-- matrix_2x2 to dyn_array [matrix_2x2] using base notation
-- matrix_3x3 to dyn_array [matrix_3x3] using base notation
-- matrix_4x4 to dyn_array [matrix_4x4] using base notation
+- int to dyn_array [int]
+- unsigned int to dyn_array [unsigned int]
+- uint8_t to dyn_array [uint8_t]
+- uint16_t to dyn_array [uint16_t]
+- uint32_t to dyn_array [uint32_t]
+- uint64_t to dyn_array [uint64_t]
+- ptr to dyn_array [uint64_t]
+- vector2 to dyn_array [vector2]
+- vector3 to dyn_array [vector3]
+- vector4 to dyn_array [vector4]
+- matrix_2x2 to dyn_array [matrix_2x2]
+- matrix_3x3 to dyn_array [matrix_3x3]
+- matrix_4x4 to dyn_array [matrix_4x4]
 
