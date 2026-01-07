@@ -144,9 +144,14 @@ static inline void clearString(struct __String* const str)
     str->string[0] = '\0';
 }
 
-static inline void freeString(struct __String* const str)
+static inline void cleanString(struct __String* const str)
 {
     free(str->string);
+}
+
+static inline void freeString(struct __String* const str)
+{
+    cleanString(str);
     free(str);
 }
 
