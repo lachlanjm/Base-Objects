@@ -360,6 +360,18 @@ static inline dyn_array* __dictionary_key_to_dyn_array__(const enum dictionary_k
             return uint32_t_to_dyn_array(*(const uint32_t*)key);
         case DICTIONARY_KEY_VALUE_TYPE_UINT64_T:
             return uint64_t_to_dyn_array(*(const uint64_t*)key);
+        case DICTIONARY_KEY_VALUE_TYPE_VECTOR_2:
+			return vector2_to_dyn_array((vector2*)key);
+        case DICTIONARY_KEY_VALUE_TYPE_VECTOR_3:
+			return vector3_to_dyn_array((vector3*)key);
+		case DICTIONARY_KEY_VALUE_TYPE_VECTOR_4:
+			return vector3_to_dyn_array((vector3*)key);
+		case DICTIONARY_KEY_VALUE_TYPE_MATRIX_2X2:
+			return matrix_2x2_to_dyn_array((matrix_2x2*)key);
+		case DICTIONARY_KEY_VALUE_TYPE_MATRIX_3X3:
+			return matrix_3x3_to_dyn_array((matrix_3x3*)key);
+		case DICTIONARY_KEY_VALUE_TYPE_MATRIX_4X4:
+			return matrix_4x4_to_dyn_array((matrix_4x4*)key);
         case DICTIONARY_KEY_VALUE_TYPE_CUSTOM:
             dyn_array* key_array = new_dyn_array(DYN_ARRAY_UINT_8T_TYPE, DYN_ARRAY_EXPANSION_DOUBLE);
             for (int i = 0; i < custom_key_size; i++)

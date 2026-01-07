@@ -444,21 +444,21 @@ static inline dyn_array* vector4_to_dyn_array(const vector4* const vector)
     return dyn_vec4;
 }
 
-static inline dyn_array* matric_2x2_to_dyn_array(const matrix_2x2* const matrix)
+static inline dyn_array* matrix_2x2_to_dyn_array(const matrix_2x2* const matrix)
 {
     dyn_array* const dyn_mat2x2 = new_dyn_array(DYN_ARRAY_MATRIX_2X2_TYPE, DYN_ARRAY_EXPANSION_DOUBLE);
     append_item_dyn_array(dyn_mat2x2, matrix);
     return dyn_mat2x2;
 }
 
-static inline dyn_array* matric_3x3_to_dyn_array(const matrix_3x3* const matrix)
+static inline dyn_array* matrix_3x3_to_dyn_array(const matrix_3x3* const matrix)
 {
     dyn_array* const dyn_mat3x3 = new_dyn_array(DYN_ARRAY_MATRIX_3X3_TYPE, DYN_ARRAY_EXPANSION_DOUBLE);
     append_item_dyn_array(dyn_mat3x3, matrix);
     return dyn_mat3x3;
 }
 
-static inline dyn_array* matric_4x4_to_dyn_array(const matrix_4x4* const matrix)
+static inline dyn_array* matrix_4x4_to_dyn_array(const matrix_4x4* const matrix)
 {
     dyn_array* const dyn_mat4x4 = new_dyn_array(DYN_ARRAY_MATRIX_4X4_TYPE, DYN_ARRAY_EXPANSION_DOUBLE);
     append_item_dyn_array(dyn_mat4x4, matrix);
